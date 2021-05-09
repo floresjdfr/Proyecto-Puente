@@ -63,27 +63,25 @@ start:
     pthread_mutex_unlock(&info->puente->puente_lock);
 }
 
-// void *automovil_oeste(void *arg)
-// {
-//     struct puente_semaforo *semaforito = (struct puente_semaforo *)arg;
-//     while (1)
-//     {
-//         // printf("En uso: %d\n", semaforito->en_uso);
-//         // printf("Este: %d\n", semaforito->este);
-//         if ((semaforito->en_uso == 0) && (semaforito->oeste == 1))
-//         {
-//             pthread_mutex_lock(&semaforito->mutex);
-//             semaforito->en_uso = 1;
-//             pthread_mutex_unlock(&semaforito->mutex);
-//             printf("Auto pasando oeste->este\n");
-//             sleep(1);
-//             printf("Auto paso\n");
-//             pthread_mutex_lock(&semaforito->mutex);
-//             semaforito->en_uso = 0;
-//             pthread_mutex_unlock(&semaforito->mutex);
-//         }
-//     }
-// }
+void *automovil_oeste(void *arg)
+{
+    struct info_autos *info = (struct info_autos *)arg;
+
+start:
+    while (info->semaforos->este == 1)
+    {
+    }
+    pthread_mutex_lock(&info->puente->puente_lock);
+    if (info->semaforos->este == 1)
+    {
+        pthread_mutex_unlock(&info->puente->puente_lock);
+        goto start;
+    }
+    printf("Auto pasando oeste->este\n");
+    sleep(2);
+    printf("Auto paso\n");
+    pthread_mutex_unlock(&info->puente->puente_lock);
+}
 
 void *cambiar_semaforo_este(void *arg)
 {
@@ -146,32 +144,41 @@ void *create_automoviles(void *arg)
     struct info_autos *info = (struct info_autos *)arg;
     int total_autos = MAX_AUTOS;
 
-    pthread_t automoviles[total_autos];
-
+    pthread_t automoviles_este[total_autos];
+    pthread_t automoviles_oeste[total_autos];
     for (int i = 0; i < total_autos; i++)
     {
-        pthread_create(&automoviles[i], NULL, automovil_este, (void *)info);
+        pthread_create(&automoviles_este[i], NULL, automovil_este, (void *)info);
     }
 
     for (int i = 0; i < total_autos; i++)
     {
-        pthread_join(automoviles[i], NULL);
+        pthread_create(&automoviles_oeste[i], NULL, automovil_oeste, (void *)info);
     }
 
+    for (int i = 0; i < total_autos; i++)
+    {
+        pthread_join(automoviles_este[i], NULL);
+    }
+
+    for (int i = 0; i < total_autos; i++)
+    {
+        pthread_join(automoviles_oeste[i], NULL);
+    }
     pthread_exit(0);
 }
 
 int main_runner(struct info_autos *info)
 {
 
-    //Thread encargado de crear los semaforots
+    //Threads encargados de crear los semaforos automoviles
     pthread_t thread_semaforos_creator, thread_automoviles_creator;
 
     pthread_create(&thread_semaforos_creator, NULL, create_semaforos, (void *)info->semaforos);
     pthread_create(&thread_automoviles_creator, NULL, create_automoviles, (void *)info);
 
-    pthread_join(thread_automoviles_creator, NULL);
     pthread_join(thread_semaforos_creator, NULL);
+    pthread_join(thread_automoviles_creator, NULL);
 
     // pthread_create(&automovil, NULL, automovil_este, (void *)puente);
     // pthread_create(&automovil2, NULL, automovil_oeste, (void *)puente);
