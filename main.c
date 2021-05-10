@@ -22,7 +22,7 @@ int main(int argc, char const *argv[])
 
 int elegir_opcion(){
     srand (time ( NULL));
-    
+
     puts("1. Carnage");
     puts("2. Semaforo");
     puts("3. Oficial de transito");
