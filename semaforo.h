@@ -5,7 +5,7 @@
 #include <time.h>
 #include <math.h>
 
-#define MAX_AUTOS 2;
+#define MAX_AUTOS 20;
 char MEDIA_ESTE[] = "MEDIA_ESTE";
 char MEDIA_OESTE[] = "MEDIA_OESTE";
 
@@ -163,13 +163,14 @@ void *cambiar_semaforo_este(void *arg)
         if (semaforitos->este == 0 && semaforitos->oeste == 1 && semaforitos->uso_timer == 0)
         {
             pthread_mutex_lock(&semaforitos->mutex);
+            printf("Semaforo 'este' encendido y 'oeste' apagado.\n");
             semaforitos->este = 1;
             semaforitos->oeste = 0;
             semaforitos->uso_timer = 1;
             semaforitos->puente->sentido = 1;
             if(revisar_puente_en_uso(semaforitos->puente) == 0)
                 semaforitos->puente->sentido_actual = 1;
-            printf("Semaforo 'este' encendido y 'oeste' apagado.\n");
+            
             pthread_mutex_unlock(&semaforitos->mutex);
 
             sleep(semaforitos->tiempo_verde_este);
@@ -191,13 +192,13 @@ void *cambiar_semaforo_oeste(void *arg)
         if (semaforitos->este == 1 && semaforitos->oeste == 0 && semaforitos->uso_timer == 0)
         {
             pthread_mutex_lock(&semaforitos->mutex);
+            printf("Semaforo 'este' apagado y 'oeste' encendido.\n");
             semaforitos->este = 0;
             semaforitos->oeste = 1;
             semaforitos->uso_timer = 1;
             semaforitos->puente->sentido = 0;
             if(revisar_puente_en_uso(semaforitos->puente) == 0)
                 semaforitos->puente->sentido_actual = 0;
-            printf("Semaforo 'este' apagado y 'oeste' encendido.\n");
             pthread_mutex_unlock(&semaforitos->mutex);
 
             sleep(semaforitos->tiempo_verde_oeste);
@@ -280,40 +281,21 @@ void *automovil_este(void *arg)
     double duracion_micro = (double) (duracion_por_posicion_array*1000000);
 
 start:
-    while (info->puente->sentido == 0 || info->puente->sentido_actual == 0)
+    while (info->puente->sentido == 0)
     {
     }
+    if (info->puente->sentido_actual == 0)
+        if(revisar_puente_en_uso(info->puente) == 0)
+            info->puente->sentido_actual = 1;
+        else
+            goto start;
 
     for (int i = 0; i < info->puente->longitud_puente; i++){
-        //puente_longitud = 100 km
-        //velocidad_auto = 40 km/h
-        //Duracion = 2.5 h;
-        //Duracion por posicion en el array 2.5/100 = 0.25 h
-        //[1][][][][][][][][]
         pthread_mutex_lock(&info->puente->puente_lock[i]);
         printf("Auto '%ld' pasando '%d'este->oeste\n",pthread_self(), i);
         usleep((int)duracion_micro);
         pthread_mutex_unlock(&info->puente->puente_lock[i]);
     }
-
-    if (info->puente->sentido == 0)
-        if(revisar_puente_en_uso(info->puente) == 0)
-            info->puente->sentido_actual = 0;
-    
-        
-
-    // pthread_mutex_lock(&info->puente->puente_lock);
-    // if (info->semaforos->oeste == 1)
-    // {
-    //     pthread_mutex_unlock(&info->puente->puente_lock);
-    //     goto start;
-    // }
-    // printf("Auto pasando este->oeste\n");
-    
-    // usleep(velocidad_promedio_microseconds);
-    // printf("Auto paso\n");
-    // pthread_mutex_unlock(&info->puente->puente_lock);
-
     pthread_exit(0);
 }
 
@@ -326,36 +308,21 @@ void *automovil_oeste(void *arg)
     double duracion_micro = (double) (duracion_por_posicion_array*1000000);
 
 start:
-    while (info->puente->sentido == 1 || info->puente->sentido_actual == 1)
+    while (info->puente->sentido == 1)
     {
     }
+    if (info->puente->sentido_actual == 1)
+        if(revisar_puente_en_uso(info->puente) == 0)
+            info->puente->sentido_actual = 0;
+        else
+            goto start;
 
-    for (int i = 0; i < info->puente->longitud_puente; i++){
-        //puente_longitud = 100 km
-        //velocidad_auto = 40 km/h
-        //Duracion = 2.5 h;
-        //Duracion por posicion en el array 2.5/100 = 0.25 h
-        //[1][][][][][][][][]
+    for (int i = info->puente->longitud_puente-1; i >= 0 ; i--){
         pthread_mutex_lock(&info->puente->puente_lock[i]);
         printf("Auto '%ld' pasando '%d'oeste->este\n",pthread_self(), i);
         usleep((int)duracion_micro);
         pthread_mutex_unlock(&info->puente->puente_lock[i]);
     }
-
-    if (info->puente->sentido == 1)
-        if(revisar_puente_en_uso(info->puente) == 0)
-            info->puente->sentido_actual = 1;
-    // pthread_mutex_lock(&info->puente->puente_lock);
-    // if (info->semaforos->este == 1)
-    // {
-    //     pthread_mutex_unlock(&info->puente->puente_lock);
-    //     goto start;
-    // }
-    // printf("Auto pasando oeste->este\n");
-    // int velocidad_promedio_microseconds = (int)(info->puente->longitud_puente / info->velocidad_auto_oeste) * 1000000;
-    // usleep(velocidad_promedio_microseconds);
-    // printf("Auto paso\n");
-    // pthread_mutex_unlock(&info->puente->puente_lock);
     pthread_exit(0);
 }
 
