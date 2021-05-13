@@ -5,11 +5,11 @@
 #include <time.h>
 #include <math.h>
 
-#define MAX_AUTOS 10;
+#define MAX_AUTOS 2;
 char MEDIA_ESTE[] = "MEDIA_ESTE";
 char MEDIA_OESTE[] = "MEDIA_OESTE";
 
-struct puente_semaforo
+struct semaforo
 {
     int tiempo_verde_este;
     int tiempo_verde_oeste;
@@ -17,6 +17,7 @@ struct puente_semaforo
     int oeste;
     int uso_timer;
     pthread_mutex_t mutex;
+    struct puente *puente;
 };
 
 struct puente
@@ -35,7 +36,7 @@ struct info_autos
     int velocidad_auto_oeste;
     int media_este;
     int media_oeste;
-    struct puente_semaforo *semaforos;
+    struct semaforo *semaforos;
     struct puente *puente;
 };
 
@@ -50,6 +51,8 @@ void *automovil_oeste(void *arg);         //Crea los automoviles que entran por 
 void *crear_autos_este(void *arg);
 void *crear_autos_oeste(void *arg);
 double ejecutar_integral(struct info_autos *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
+int revisar_puente_en_uso(struct puente *puente); //funcion que recorre el arreglo de mutex revisando si hay un automovil
+//usando el puente o no
 
 int iniciar_semaforo()
 {
@@ -79,7 +82,7 @@ int iniciar_semaforo()
     fclose(file);
 
     //Struct donde se guardan los datos de los semaforos
-    struct puente_semaforo *semaforos = malloc(sizeof(struct puente_semaforo));
+    struct semaforo *semaforos = malloc(sizeof(struct semaforo));
 
     //Struct donde se guardan los datos del puente
     struct puente *puente = malloc(sizeof(struct puente));
@@ -87,9 +90,8 @@ int iniciar_semaforo()
     //Inicializacion de variables del puente
     puente->en_uso = 0;
     puente->longitud_puente = longitud_puente;
-    puente->sentido = -1;
-    puente->sentido_actual = -1;
-    puente->puente_array = calloc(puente->longitud_puente, sizeof(int));
+    puente->sentido = 1;
+    puente->sentido_actual = 1;
     puente->puente_lock = calloc(puente->longitud_puente, sizeof(pthread_mutex_t));
             //inicializacion de mutex del puente
     for (int i = 0; i < puente->longitud_puente; i++){
@@ -102,6 +104,8 @@ int iniciar_semaforo()
     semaforos->este = 0;
     semaforos->oeste = 1;
     semaforos->uso_timer = 0;
+    semaforos->puente = puente;
+    
     pthread_mutex_init(&semaforos->mutex, NULL);
 
     //Inicializacion de varibales de struct donde se encaptulan las structs puente y semaforos
@@ -138,7 +142,7 @@ int main_runner(struct info_autos *info)
 
 void *create_semaforos(void *arg)
 {
-    struct puente_semaforo *semaforos = (struct puente_semaforo *)arg;
+    struct semaforo *semaforos = (struct semaforo *)arg;
 
     pthread_t thread_semaforo_este, thread_semaforo_oeste; //Un thread para cada semaforo
 
@@ -153,7 +157,7 @@ void *create_semaforos(void *arg)
 
 void *cambiar_semaforo_este(void *arg)
 {
-    struct puente_semaforo *semaforitos = (struct puente_semaforo *)arg;
+    struct semaforo *semaforitos = (struct semaforo *)arg;
     while (1)
     {
         if (semaforitos->este == 0 && semaforitos->oeste == 1 && semaforitos->uso_timer == 0)
@@ -162,6 +166,9 @@ void *cambiar_semaforo_este(void *arg)
             semaforitos->este = 1;
             semaforitos->oeste = 0;
             semaforitos->uso_timer = 1;
+            semaforitos->puente->sentido = 1;
+            if(revisar_puente_en_uso(semaforitos->puente) == 0)
+                semaforitos->puente->sentido_actual = 1;
             printf("Semaforo 'este' encendido y 'oeste' apagado.\n");
             pthread_mutex_unlock(&semaforitos->mutex);
 
@@ -178,7 +185,7 @@ void *cambiar_semaforo_este(void *arg)
 
 void *cambiar_semaforo_oeste(void *arg)
 {
-    struct puente_semaforo *semaforitos = (struct puente_semaforo *)arg;
+    struct semaforo *semaforitos = (struct semaforo *)arg;
     while (1)
     {
         if (semaforitos->este == 1 && semaforitos->oeste == 0 && semaforitos->uso_timer == 0)
@@ -187,6 +194,9 @@ void *cambiar_semaforo_oeste(void *arg)
             semaforitos->este = 0;
             semaforitos->oeste = 1;
             semaforitos->uso_timer = 1;
+            semaforitos->puente->sentido = 0;
+            if(revisar_puente_en_uso(semaforitos->puente) == 0)
+                semaforitos->puente->sentido_actual = 0;
             printf("Semaforo 'este' apagado y 'oeste' encendido.\n");
             pthread_mutex_unlock(&semaforitos->mutex);
 
@@ -264,60 +274,88 @@ void *crear_autos_oeste(void *arg)
 void *automovil_este(void *arg)
 {
     struct info_autos *info = (struct info_autos *)arg;
-    int velocidad_promedio_microseconds = (int)(info->puente->longitud_puente / info->velocidad_auto_este) * 1000000;
-    int velocidad_promedio = (int)(info->puente->longitud_puente / info->velocidad_auto_este);
+    double duracion_total = (double)(info->puente->longitud_puente / info->velocidad_auto_este);
+    double duracion_por_posicion_array = (double)(duracion_total/info->puente->longitud_puente);//Esta es la duracion
+    //del vehiculo en cada espacio del array;
+    double duracion_micro = (double) (duracion_por_posicion_array*1000000);
 
 start:
-    while (info->semaforos->oeste == 1)
+    while (info->puente->sentido == 0 || info->puente->sentido_actual == 0)
     {
     }
 
-    for (int i = 0; i < info->puente->longitud_puente; i+=velocidad_promedio){
-        //[][1][1][][][][][][]
+    for (int i = 0; i < info->puente->longitud_puente; i++){
+        //puente_longitud = 100 km
+        //velocidad_auto = 40 km/h
+        //Duracion = 2.5 h;
+        //Duracion por posicion en el array 2.5/100 = 0.25 h
+        //[1][][][][][][][][]
         pthread_mutex_lock(&info->puente->puente_lock[i]);
-        if (i == 0 && info->semaforos->oeste == 1){
-            pthread_mutex_unlock(&info->puente->puente_lock[i]);
-            goto start;
-        }
-        pthread_mutex_lock(&info->puente->puente_lock[i]);
-        
-        
-
+        printf("Auto '%ld' pasando '%d'este->oeste\n",pthread_self(), i);
+        usleep((int)duracion_micro);
+        pthread_mutex_unlock(&info->puente->puente_lock[i]);
     }
 
-    pthread_mutex_lock(&info->puente->puente_lock);
-    if (info->semaforos->oeste == 1)
-    {
-        pthread_mutex_unlock(&info->puente->puente_lock);
-        goto start;
-    }
-    printf("Auto pasando este->oeste\n");
+    if (info->puente->sentido == 0)
+        if(revisar_puente_en_uso(info->puente) == 0)
+            info->puente->sentido_actual = 0;
     
-    usleep(velocidad_promedio_microseconds);
-    printf("Auto paso\n");
-    pthread_mutex_unlock(&info->puente->puente_lock);
+        
+
+    // pthread_mutex_lock(&info->puente->puente_lock);
+    // if (info->semaforos->oeste == 1)
+    // {
+    //     pthread_mutex_unlock(&info->puente->puente_lock);
+    //     goto start;
+    // }
+    // printf("Auto pasando este->oeste\n");
+    
+    // usleep(velocidad_promedio_microseconds);
+    // printf("Auto paso\n");
+    // pthread_mutex_unlock(&info->puente->puente_lock);
+
     pthread_exit(0);
 }
 
 void *automovil_oeste(void *arg)
 {
     struct info_autos *info = (struct info_autos *)arg;
+    double duracion_total = (double)(info->puente->longitud_puente / info->velocidad_auto_este);
+    double duracion_por_posicion_array = (double)(duracion_total/info->puente->longitud_puente);//Esta es la duracion
+    //del vehiculo en cada espacio del array.tos *)arg;
+    double duracion_micro = (double) (duracion_por_posicion_array*1000000);
 
 start:
-    while (info->semaforos->este == 1)
+    while (info->puente->sentido == 1 || info->puente->sentido_actual == 1)
     {
     }
-    pthread_mutex_lock(&info->puente->puente_lock);
-    if (info->semaforos->este == 1)
-    {
-        pthread_mutex_unlock(&info->puente->puente_lock);
-        goto start;
+
+    for (int i = 0; i < info->puente->longitud_puente; i++){
+        //puente_longitud = 100 km
+        //velocidad_auto = 40 km/h
+        //Duracion = 2.5 h;
+        //Duracion por posicion en el array 2.5/100 = 0.25 h
+        //[1][][][][][][][][]
+        pthread_mutex_lock(&info->puente->puente_lock[i]);
+        printf("Auto '%ld' pasando '%d'oeste->este\n",pthread_self(), i);
+        usleep((int)duracion_micro);
+        pthread_mutex_unlock(&info->puente->puente_lock[i]);
     }
-    printf("Auto pasando oeste->este\n");
-    int velocidad_promedio_microseconds = (int)(info->puente->longitud_puente / info->velocidad_auto_oeste) * 1000000;
-    usleep(velocidad_promedio_microseconds);
-    printf("Auto paso\n");
-    pthread_mutex_unlock(&info->puente->puente_lock);
+
+    if (info->puente->sentido == 1)
+        if(revisar_puente_en_uso(info->puente) == 0)
+            info->puente->sentido_actual = 1;
+    // pthread_mutex_lock(&info->puente->puente_lock);
+    // if (info->semaforos->este == 1)
+    // {
+    //     pthread_mutex_unlock(&info->puente->puente_lock);
+    //     goto start;
+    // }
+    // printf("Auto pasando oeste->este\n");
+    // int velocidad_promedio_microseconds = (int)(info->puente->longitud_puente / info->velocidad_auto_oeste) * 1000000;
+    // usleep(velocidad_promedio_microseconds);
+    // printf("Auto paso\n");
+    // pthread_mutex_unlock(&info->puente->puente_lock);
     pthread_exit(0);
 }
 
@@ -337,4 +375,19 @@ double ejecutar_integral(struct info_autos *info, char eleccion_media[])
     }
 
     return result;
+}
+
+int revisar_puente_en_uso(struct puente *puente){
+    int puente_libre_counter = 0;
+    for (int i = 0; i < puente->longitud_puente; i++){
+        if (pthread_mutex_trylock(&puente->puente_lock[i])  == 0){
+            pthread_mutex_unlock(&puente->puente_lock[i]);
+            puente_libre_counter++;
+        }
+    }
+    if (puente_libre_counter == puente->longitud_puente)//si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
+        return 0;
+    else
+        return 1;
+         
 }
