@@ -4,8 +4,10 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
+#include "stack.h"
 
-#define MAX_AUTOS 20;
+#define MAX_AUTOS 0
+#define MAX_STACK 20
 char MEDIA_ESTE[] = "MEDIA_ESTE";
 char MEDIA_OESTE[] = "MEDIA_OESTE";
 
@@ -22,12 +24,13 @@ struct semaforo
 
 struct puente
 {
-    int sentido; //1 = este 0 = oeste
+    int sentido;        //1 = este 0 = oeste
     int sentido_actual; //1 = este 0 = oeste
     int longitud_puente;
-    int *puente_array;
-    int en_uso;
     pthread_mutex_t *puente_lock;
+    struct stack *ambulancias_este;
+    struct stack *ambulancias_oeste;
+    int sentido_ambulancia; //1 = este 0 = oeste
 };
 
 struct info_autos
@@ -51,7 +54,7 @@ void *automovil_oeste(void *arg);         //Crea los automoviles que entran por 
 void *crear_autos_este(void *arg);
 void *crear_autos_oeste(void *arg);
 double ejecutar_integral(struct info_autos *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
-int revisar_puente_en_uso(struct puente *puente); //funcion que recorre el arreglo de mutex revisando si hay un automovil
+int revisar_puente_en_uso(struct puente *puente);                         //funcion que recorre el arreglo de mutex revisando si hay un automovil
 //usando el puente o no
 
 int iniciar_semaforo()
@@ -88,15 +91,20 @@ int iniciar_semaforo()
     struct puente *puente = malloc(sizeof(struct puente));
 
     //Inicializacion de variables del puente
-    puente->en_uso = 0;
     puente->longitud_puente = longitud_puente;
     puente->sentido = 1;
     puente->sentido_actual = 1;
     puente->puente_lock = calloc(puente->longitud_puente, sizeof(pthread_mutex_t));
-            //inicializacion de mutex del puente
-    for (int i = 0; i < puente->longitud_puente; i++){
+    //inicializacion de mutex del puente
+    for (int i = 0; i < puente->longitud_puente; i++)
+    {
         pthread_mutex_init(&puente->puente_lock[i], NULL);
     }
+    puente->sentido_ambulancia = 1;
+    puente->ambulancias_este = malloc(sizeof(struct Stack));
+    puente->ambulancias_oeste = malloc(sizeof(struct Stack));
+    int stack_size = MAX_STACK;
+    createStack(stack_size);
 
     //Inicializacion de variables de los semaforos
     semaforos->tiempo_verde_este = tiempo_verde_este;
@@ -105,7 +113,7 @@ int iniciar_semaforo()
     semaforos->oeste = 1;
     semaforos->uso_timer = 0;
     semaforos->puente = puente;
-    
+
     pthread_mutex_init(&semaforos->mutex, NULL);
 
     //Inicializacion de varibales de struct donde se encaptulan las structs puente y semaforos
@@ -120,6 +128,9 @@ int iniciar_semaforo()
     //Llamada a la funcion principal que iniciara la simulacion de los semaforos
     main_runner(info);
 
+    free(puente->puente_lock);
+    free(puente->ambulancias_este);
+    free(puente->ambulancias_oeste);
     free(info);
     free(semaforos);
     free(puente);
@@ -168,9 +179,9 @@ void *cambiar_semaforo_este(void *arg)
             semaforitos->oeste = 0;
             semaforitos->uso_timer = 1;
             semaforitos->puente->sentido = 1;
-            if(revisar_puente_en_uso(semaforitos->puente) == 0)
+            if (revisar_puente_en_uso(semaforitos->puente) == 0)
                 semaforitos->puente->sentido_actual = 1;
-            
+
             pthread_mutex_unlock(&semaforitos->mutex);
 
             sleep(semaforitos->tiempo_verde_este);
@@ -197,7 +208,7 @@ void *cambiar_semaforo_oeste(void *arg)
             semaforitos->oeste = 1;
             semaforitos->uso_timer = 1;
             semaforitos->puente->sentido = 0;
-            if(revisar_puente_en_uso(semaforitos->puente) == 0)
+            if (revisar_puente_en_uso(semaforitos->puente) == 0)
                 semaforitos->puente->sentido_actual = 0;
             pthread_mutex_unlock(&semaforitos->mutex);
 
@@ -236,6 +247,7 @@ void *crear_autos_este(void *arg)
 
     for (int i = 0; i < total_autos; i++)
     {
+
         pthread_create(&automoviles_este[i], NULL, automovil_este, (void *)info);
     }
 
@@ -276,23 +288,24 @@ void *automovil_este(void *arg)
 {
     struct info_autos *info = (struct info_autos *)arg;
     double duracion_total = (double)(info->puente->longitud_puente / info->velocidad_auto_este);
-    double duracion_por_posicion_array = (double)(duracion_total/info->puente->longitud_puente);//Esta es la duracion
+    double duracion_por_posicion_array = (double)(duracion_total / info->puente->longitud_puente); //Esta es la duracion
     //del vehiculo en cada espacio del array;
-    double duracion_micro = (double) (duracion_por_posicion_array*1000000);
+    double duracion_micro = (double)(duracion_por_posicion_array * 1000000);
 
 start:
     while (info->puente->sentido == 0)
     {
     }
     if (info->puente->sentido_actual == 0)
-        if(revisar_puente_en_uso(info->puente) == 0)
+        if (revisar_puente_en_uso(info->puente) == 0)
             info->puente->sentido_actual = 1;
         else
             goto start;
 
-    for (int i = 0; i < info->puente->longitud_puente; i++){
+    for (int i = 0; i < info->puente->longitud_puente; i++)
+    {
         pthread_mutex_lock(&info->puente->puente_lock[i]);
-        printf("Auto '%ld' pasando '%d'este->oeste\n",pthread_self(), i);
+        printf("Auto '%ld' pasando '%d'este->oeste\n", pthread_self(), i);
         usleep((int)duracion_micro);
         pthread_mutex_unlock(&info->puente->puente_lock[i]);
     }
@@ -303,23 +316,24 @@ void *automovil_oeste(void *arg)
 {
     struct info_autos *info = (struct info_autos *)arg;
     double duracion_total = (double)(info->puente->longitud_puente / info->velocidad_auto_este);
-    double duracion_por_posicion_array = (double)(duracion_total/info->puente->longitud_puente);//Esta es la duracion
+    double duracion_por_posicion_array = (double)(duracion_total / info->puente->longitud_puente); //Esta es la duracion
     //del vehiculo en cada espacio del array.tos *)arg;
-    double duracion_micro = (double) (duracion_por_posicion_array*1000000);
+    double duracion_micro = (double)(duracion_por_posicion_array * 1000000);
 
 start:
     while (info->puente->sentido == 1)
     {
     }
     if (info->puente->sentido_actual == 1)
-        if(revisar_puente_en_uso(info->puente) == 0)
+        if (revisar_puente_en_uso(info->puente) == 0)
             info->puente->sentido_actual = 0;
         else
             goto start;
 
-    for (int i = info->puente->longitud_puente-1; i >= 0 ; i--){
+    for (int i = info->puente->longitud_puente - 1; i >= 0; i--)
+    {
         pthread_mutex_lock(&info->puente->puente_lock[i]);
-        printf("Auto '%ld' pasando '%d'oeste->este\n",pthread_self(), i);
+        printf("Auto '%ld' pasando '%d'oeste->este\n", pthread_self(), i);
         usleep((int)duracion_micro);
         pthread_mutex_unlock(&info->puente->puente_lock[i]);
     }
@@ -344,17 +358,27 @@ double ejecutar_integral(struct info_autos *info, char eleccion_media[])
     return result;
 }
 
-int revisar_puente_en_uso(struct puente *puente){
+int revisar_puente_en_uso(struct puente *puente)
+{
     int puente_libre_counter = 0;
-    for (int i = 0; i < puente->longitud_puente; i++){
-        if (pthread_mutex_trylock(&puente->puente_lock[i])  == 0){
+    for (int i = 0; i < puente->longitud_puente; i++)
+    {
+        if (pthread_mutex_trylock(&puente->puente_lock[i]) == 0)
+        {
             pthread_mutex_unlock(&puente->puente_lock[i]);
             puente_libre_counter++;
         }
     }
-    if (puente_libre_counter == puente->longitud_puente)//si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
+    if (puente_libre_counter == puente->longitud_puente) //si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
         return 0;
     else
         return 1;
-         
+}
+
+int es_ambulancia()
+{
+    int ganador = rand() % 100;
+    if (ganador > 19 && ganador < 41) //Si ganador esta entre 20 y 40 el automivil es una ambulancia;
+        return 1;
+    return 0;
 }
