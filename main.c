@@ -7,20 +7,25 @@ int main(int argc, char const *argv[])
     int opcion_elegida = elegir_opcion();
     switch (opcion_elegida)
     {
+    case 1:
+        iniciar_carnage();
+        break;
+
     case 2:
         iniciar_semaforo();
         break;
-    
+
     default:
+
         break;
     }
-    
+
     return 0;
 }
 
-
-int elegir_opcion(){
-    srand (time ( NULL));
+int elegir_opcion()
+{
+    srand(time(NULL));
 
     puts("1. Carnage");
     puts("2. Semaforo");
