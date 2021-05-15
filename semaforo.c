@@ -4,7 +4,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
-#include "stack.h"
+#include "stack.c"
+
 
 #define MAX_AUTOS 0
 #define MAX_STACK 20

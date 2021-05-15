@@ -1,4 +1,6 @@
-#include "semaforo.h"
+#include "semaforo.c"
+#include "carnage.c"
+
 
 int elegir_opcion();
 
