@@ -1,5 +1,6 @@
-#include "semaforo.c"
-#include "carnage.c"
+#include "semaforo.h"
+#include "carnage.h"
+#include "oficial_transito.h"
 
 
 int elegir_opcion();
@@ -16,9 +17,11 @@ int main(int argc, char const *argv[])
     case 2:
         iniciar_semaforo();
         break;
+    case 3:
+        iniciar_oficial();
+        break;
 
     default:
-
         break;
     }
 
