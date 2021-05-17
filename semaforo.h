@@ -6,7 +6,7 @@
 #include <math.h>
 
 
-#define MAX_AUTOS 10
+#define MAX_AUTOS 1000
 char MEDIA_ESTE[] = "MEDIA_ESTE";
 char MEDIA_OESTE[] = "MEDIA_OESTE";
 
@@ -50,10 +50,7 @@ void *automovil_oeste(void *arg);         //Crea los automoviles que entran por 
 void *crear_autos_este(void *arg);
 void *crear_autos_oeste(void *arg);
 double ejecutar_integral(struct info_autos *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
-int revisar_puente_en_uso(struct puente *puente);                         //funcion que recorre el arreglo de mutex revisando si hay un automovil
-//usando el puente o no
-int revisar_puente_en_uso_este_oeste(struct puente *puente);
-int revisar_puente_en_uso_oeste_este(struct puente *puente);
+int revisar_puente_en_uso_semaforo(struct puente *puente);
 
 int iniciar_semaforo()
 {
@@ -282,7 +279,7 @@ start:
     {
     }
     if (info->puente->sentido_actual == 0)
-        if (revisar_puente_en_uso_este_oeste(info->puente) == 0)
+        if (revisar_puente_en_uso_semaforo(info->puente) == 0)
             info->puente->sentido_actual = 1;
         else
             goto start;
@@ -310,7 +307,7 @@ start:
     {
     }
     if (info->puente->sentido_actual == 1)
-        if (revisar_puente_en_uso_este_oeste(info->puente) == 0)
+        if (revisar_puente_en_uso_semaforo(info->puente) == 0)
             info->puente->sentido_actual = 0;
         else
             goto start;
@@ -343,51 +340,28 @@ double ejecutar_integral(struct info_autos *info, char eleccion_media[])
     return result;
 }
 
-int revisar_puente_en_uso_este_oeste(struct puente *puente)
+int revisar_puente_en_uso_semaforo(struct puente *puente)
 {
     int puente_libre_counter = 0;
     for (int i = 0; i < puente->longitud_puente; i++)
     {
-        if (pthread_mutex_trylock(&puente->puente_lock[i]) == 0)
+        int lock_izquierda = pthread_mutex_trylock(&puente->puente_lock[i]);//revisa la disponibilidad del puente de izquierda a derecha
+        int lock_derecha = pthread_mutex_trylock(&puente->puente_lock[(puente->longitud_puente-1)-i]); //revisa la disponibilidad del puente de derecha a izquierda
+        if (lock_izquierda == 0 && lock_derecha == 0)
         {
             pthread_mutex_unlock(&puente->puente_lock[i]);
+            pthread_mutex_unlock(&puente->puente_lock[(puente->longitud_puente-1)-i]);
             puente_libre_counter++;
+            continue;
         }
-    }
-    for (int i = puente->longitud_puente-1; i >= 0; i--)
-    {
-        if (pthread_mutex_trylock(&puente->puente_lock[i]) == 0)
-        {
+        if (lock_izquierda == 0){
             pthread_mutex_unlock(&puente->puente_lock[i]);
-            puente_libre_counter++;
+        }
+        else if (lock_derecha == 0){
+            pthread_mutex_unlock(&puente->puente_lock[(puente->longitud_puente-1)-i]);
         }
     }
-    if (puente_libre_counter == 2*(puente->longitud_puente)) //si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
-        return 0;
-    else
-        return 1;
-}
-
-int revisar_puente_en_uso_oeste_este(struct puente *puente)
-{
-    int puente_libre_counter = 0;
-    for (int i = puente->longitud_puente-1; i >= 0; i--)
-    {
-        if (pthread_mutex_trylock(&puente->puente_lock[i]) == 0)
-        {
-            pthread_mutex_unlock(&puente->puente_lock[i]);
-            puente_libre_counter++;
-        }
-    }
-    for (int i = 0; i < puente->longitud_puente; i++)
-    {
-        if (pthread_mutex_trylock(&puente->puente_lock[i]) == 0)
-        {
-            pthread_mutex_unlock(&puente->puente_lock[i]);
-            puente_libre_counter++;
-        }
-    }
-    if (puente_libre_counter == 2*(puente->longitud_puente)) //si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
+    if (puente_libre_counter == (puente->longitud_puente)) //si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
         return 0;
     else
         return 1;
