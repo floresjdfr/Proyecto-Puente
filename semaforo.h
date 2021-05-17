@@ -4,11 +4,9 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
-#include "stack.c"
 
 
-#define MAX_AUTOS 0
-#define MAX_STACK 20
+#define MAX_AUTOS 1000
 char MEDIA_ESTE[] = "MEDIA_ESTE";
 char MEDIA_OESTE[] = "MEDIA_OESTE";
 
@@ -102,10 +100,6 @@ int iniciar_semaforo()
         pthread_mutex_init(&puente->puente_lock[i], NULL);
     }
     puente->sentido_ambulancia = 1;
-    puente->ambulancias_este = malloc(sizeof(struct Stack));
-    puente->ambulancias_oeste = malloc(sizeof(struct Stack));
-    int stack_size = MAX_STACK;
-    createStack(stack_size);
 
     //Inicializacion de variables de los semaforos
     semaforos->tiempo_verde_este = tiempo_verde_este;

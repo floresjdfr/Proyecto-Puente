@@ -1,0 +1,85 @@
+\documentclass[16pt,a4papper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{Referencias.bib}
+
+\title{Proyecto 1: Puente}
+\author{José David Flores Rodríguez}
+\date{\today}
+
+\begin{document}
+	\begin{center}
+		
+		\includegraphics[width=200px]{Logo-UNA.png}
+		\vspace{1cm}
+
+	
+		\large
+		Universidad Nacional de Costa Rica
+		\vspace{1cm}
+		
+	
+		\large
+		Escuela de informática
+		\vspace{1cm}
+		
+
+		\large
+		Proyecto de Sistemas Operativos: Puente
+		\vspace{1cm}
+		
+
+		\large
+		Estudiante: José David Flores Rodríguez
+		\vspace{1cm}
+		
+	
+		\large
+		Profesor: Eddy Rampirez
+		\vspace{1cm}
+	
+		\large
+		Fecha \today
+		\vspace{1cm}
+	\end{center}
+	
+	\newpage
+	\section{Introducción}
+	Para este proyecto se nos pide realizar una simulación de un puente el cual tiene solo una vía, o sea solo un sentido. Esta vía o sentido puede ser de: este a oeste o de oeste a este, dependiendo de ciertos factores como lo son: semáforos vehiculares, policías de transito o el que "llega de primero". Dichas entidades serán las encargadas de controlar el paso por el puente para evitar choques entre los vehículos y aprovechar al máximo este recurso (el puente).\par
+	
+	Para realizar esta simulación debíamos utilizar el lenguaje de programación C y el sistema operativo linux. Además de usar los hilos de la librería POSIX para la implementación de las entidades (vehículos, semáforos, oficiales de transito, ambulancias...).\par
+
+	En este texto se explicarán las librerías de C utilizadas para la elaboración del proyecto, la descripción de la implementación del problema propuesto, descripción de la experiencia durante la realización del mismo y aprendizajes.\par
+	
+	\newpage
+	\section{Marco Teórico}
+	Sin duda alguna en un programa los hilos son de gran importancia ya que permite la ejecución de varias tareas de manera "simultanea", sin embargo, aunque se perciba que las tareas se realizan al mismo tiempo, esto no es así; cada núcleo del procesador puede realizar una tarea a la vez, lo que sucede es que este trabaja a una velocidad tan rápida que nuestra percepción es que se ejecutan al mismo tiempo, más aún si el procesador es multi núcleo lo que si permitiría la ejecución de varios procesos de forma paralela(al mismo tiempo). En el lenguaje de programación C existe una librería muy popular para la administración de hilos la cual esta basada en POSIX. POSIX es un una interfaz "standart" para todos los sistemas operativos la cual permite que el programa sea portable y pueda ser ejecutado en diferentes sistemas operativos basados en POSIX, según \cite{POSIX_documentation}.\par 
+	
+	La librería de la cual se habla en el párrafo anterior se llama Pthread y esta tiene las siguientes funciones que permiten la administración de hilos:\par
+	
+	\begin{itemize}
+		\item \textbf{pthread\_t:} Usado para identificar un hilo.
+		\item \textbf{pthread\_create(pthread\_t *thread, const pthread\_attr\_t *attr,
+			void *(*start\_routine)(void*), void *arg):} Permite crear un nuevo hilo. Los atributos que se desean utilizar para el hilo se especifican en el parámetro "attr", el parámetro "start\_routine" es la función que se va a ejecutar y el parámetro "arg" recibe los argumentos que se quieran pasar a la función que se va a ejecutar.
+		\item \textbf{pthread\_exit(void *value\_ptr):} Esta función termina la ejecución del hilo que la llama, permite que el atributo referenciado en "value\_ptr" sea accedido cuando se utilice la función "pthread\_join".
+		\item \textbf{pthread\_join(pthread\_t thread, void **value\_ptr):} Permite suspender la ejecución del hilo que lo llama hasta que el hilo referenciado en el parámetro "thread" haya terminado su ejecución. El valor de "value\_ptr" contiene el valor que pasó desde la función "pthread\_exit".
+		\item \textbf{int pthread\_mutex\_init(pthread\_mutex\_t *mutex, const pthread\_mutexattr\_t *attr):} Función que permite que se inicie un MUTEX con los atributos especificados en el parámetro "atr".
+		\item \textbf{int pthread\_mutex\_lock(pthread\_mutex\_t *mutex):} El MUTEX se bloquea cuando esta función es llamada.
+		\item \textbf{int pthread\_mutex\_trylock(pthread\_mutex\_t *mutex):} Esta función intentará bloquear el MUTEX y retornará el entero 0 si la operación fue exitosa.
+		\item \textbf{int pthread\_mutex\_unlock(pthread\_mutex\_t *mutex):} El MUTEX se desbloquea cuando se llama pthread\_mutex\_unlock.	
+	\end{itemize}
+
+	Las funciones anteriores son solo algunas de disponibles en la librería pthread, al igual que estas, la totalidad de funciones se pueden consultar en la documentación de "pthread.h" \cite{Pthread_documentation}. 
+
+	
+	
+	\newpage
+	\printbibliography
+	
+	
+\end{document}
