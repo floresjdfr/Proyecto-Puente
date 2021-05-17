@@ -286,6 +286,8 @@ start:
 
     for (int i = 0; i < info->puente->longitud_puente; i++)
     {
+        if (i == 0)
+            printf("PASA ESTE #%ld\n", pthread_self());
         pthread_mutex_lock(&info->puente->puente_lock[i]);
         printf("Auto '%ld' pasando '%d'este->oeste\n", pthread_self(), i);
         usleep((int)duracion_micro);
@@ -314,6 +316,8 @@ start:
 
     for (int i = info->puente->longitud_puente - 1; i >= 0; i--)
     {
+        if (i == info->puente->longitud_puente - 1)
+            printf("PASA OESTE #%ld \n", pthread_self());
         pthread_mutex_lock(&info->puente->puente_lock[i]);
         printf("Auto '%ld' pasando '%d'oeste->este\n", pthread_self(), i);
         usleep((int)duracion_micro);

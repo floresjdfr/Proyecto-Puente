@@ -6,7 +6,6 @@
 #include <math.h>
 
 #define MAX_AUTOS_CARNAGE 1000
-#define MAX_STACK_CARNAGE 20
 char MEDIA_ESTE_CARNAGE[] = "MEDIA_ESTE";
 char MEDIA_OESTE_CARNAGE[] = "MEDIA_OESTE";
 
@@ -16,9 +15,6 @@ struct puente_carnage
     int sentido_actual; //1 = este 0 = oeste
     int longitud_puente;
     pthread_mutex_t *puente_lock;
-    //struct stack *ambulancias_este;
-    //struct stack *ambulancias_oeste;
-    int sentido_ambulancia; //1 = este 0 = oeste
 };
 
 struct info_autos_carnage
@@ -79,11 +75,6 @@ int iniciar_carnage()
     {
         pthread_mutex_init(&puente->puente_lock[i], NULL);
     }
-    puente->sentido_ambulancia = 1;
-    //puente->ambulancias_este = (struct stack*)malloc(sizeof(struct Stack));
-    //puente->ambulancias_oeste = (struct stack*)malloc(sizeof(struct Stack));
-    //int stack_size = MAX_STACK_CARNAGE;
-    //createStack(stack_size);
 
     //Inicializacion de varibales de struct donde se encaptulan las structs puente y semaforos
     struct info_autos_carnage *info = (struct info_autos_carnage *)malloc(sizeof(struct info_autos_carnage));
@@ -97,8 +88,6 @@ int iniciar_carnage()
     main_runner_carnage(info);
 
     free(puente->puente_lock);
-    //free(puente->ambulancias_este);
-    //free(puente->ambulancias_oeste);
     free(info);
     free(puente);
 }
@@ -191,6 +180,8 @@ start:
 
     for (int i = 0; i < info->puente->longitud_puente; i++)
     {
+        if (i == 0)
+            printf("PASA ESTE #%ld\n", pthread_self());
 
         pthread_mutex_lock(&info->puente->puente_lock[i]);
         printf("Auto '%ld' pasando '%d'este->oeste\n", pthread_self(), i);
@@ -222,6 +213,8 @@ start:
 
     for (int i = info->puente->longitud_puente - 1; i >= 0; i--)
     {   
+        if (i == info->puente->longitud_puente - 1)
+            printf("PASA OESTE #%ld\n", pthread_self());
         pthread_mutex_lock(&info->puente->puente_lock[i]);
         printf("Auto '%ld' pasando '%d'oeste->este\n", pthread_self(), i);
         usleep((int)duracion_micro);
