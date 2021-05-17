@@ -45,46 +45,46 @@
 		\vspace{1cm}
 
 	
-		\large
+		\LARGE
 		Universidad Nacional de Costa Rica
 		\vspace{1cm}
 		
 	
-		\large
+		\LARGE
 		Escuela de informática
 		\vspace{1cm}
 		
 
-		\large
+		\LARGE
 		Proyecto de Sistemas Operativos: Puente
 		\vspace{1cm}
 		
 
-		\large
+		\LARGE
 		Estudiante: José David Flores Rodríguez
 		\vspace{1cm}
 		
 	
-		\large
-		Profesor: Eddy Rampirez
+		\LARGE
+		Profesor: Eddy Ramírez
 		\vspace{1cm}
 	
-		\large
+		\LARGE
 		Fecha \today
 		\vspace{1cm}
 	\end{center}
 	
 	\newpage
 	\section{Introducción}
-	Para este proyecto se nos pide realizar una simulación de un puente el cual tiene solo una vía, o sea solo un sentido. Esta vía o sentido puede ser de: este a oeste o de oeste a este, dependiendo de ciertos factores como lo son: semáforos vehiculares, policías de transito o el que "llega de primero". Dichas entidades serán las encargadas de controlar el paso por el puente para evitar choques entre los vehículos y aprovechar al máximo este recurso (el puente).\par
+	Para este proyecto se nos pidió realizar una simulación de un puente el cual tiene solo una vía, o sea solo un sentido. Esta vía o sentido puede ser de: este a oeste o de oeste a este, dependiendo de ciertos factores como lo son: semáforos vehiculares, policías de transito o el que "llega de primero". Dichas entidades serán las encargadas de controlar el paso por el puente para evitar choques entre los vehículos y aprovechar al máximo este recurso (el puente).\par
 	
-	Para realizar esta simulación debíamos utilizar el lenguaje de programación C y el sistema operativo linux. Además de usar los hilos de la librería POSIX para la implementación de las entidades (vehículos, semáforos, oficiales de transito, ambulancias...).\par
+	Para realizar esta simulación debíamos utilizar el lenguaje de programación C y el sistema operativo Linux. Además de usar los hilos de la librería POSIX para la implementación de las entidades (vehículos, semáforos, oficiales de tránsito, ambulancias...).\par
 
 	En este texto se explicarán las librerías de C utilizadas para la elaboración del proyecto, la descripción de la implementación del problema propuesto, descripción de la experiencia durante la realización del mismo y aprendizajes.\par
 	
 	\newpage
 	\section{Marco Teórico}
-	Sin duda alguna en un programa los hilos son de gran importancia ya que permite la ejecución de varias tareas de manera "simultanea", sin embargo, aunque se perciba que las tareas se realizan al mismo tiempo, esto no es así; cada núcleo del procesador puede realizar una tarea a la vez, lo que sucede es que este trabaja a una velocidad tan rápida que nuestra percepción es que se ejecutan al mismo tiempo, más aún si el procesador es multi núcleo lo que si permitiría la ejecución de varios procesos de forma paralela(al mismo tiempo). En el lenguaje de programación C existe una librería muy popular para la administración de hilos la cual esta basada en POSIX. POSIX es un una interfaz "standart" para todos los sistemas operativos la cual permite que el programa sea portable y pueda ser ejecutado en diferentes sistemas operativos basados en POSIX, según \cite{POSIX_documentation}.\par 
+	Sin duda alguna en un programa los hilos tienen gran importancia ya que permiten la ejecución de varias tareas de manera "simultanea". Sin embargo, aunque se perciba que las tareas se realizan al mismo tiempo, esto no es así, cada núcleo del procesador puede realizar una tarea a la vez, lo que sucede es que este trabaja a una velocidad tan rápida que nuestra percepción es que se ejecutan al mismo tiempo, más aún si el procesador es multi núcleo lo que si permitiría la ejecución de varios procesos de forma paralela (al mismo tiempo). En el lenguaje de programación C existe una librería muy popular para la administración de hilos la cual esta basada en POSIX. POSIX es un una interfaz "standart" para todos los sistemas operativos la cual permite que el programa sea portable y pueda ser ejecutado en diferentes sistemas operativos basados en POSIX, según \cite{POSIX_documentation}.\par 
 	
 	La librería de la cual se habla en el párrafo anterior se llama Pthread y esta tiene las siguientes funciones que permiten la administración de hilos:\par
 	
@@ -100,14 +100,14 @@
 		\item \textbf{int pthread\_mutex\_unlock(pthread\_mutex\_t *mutex):} El MUTEX se desbloquea cuando se llama pthread\_mutex\_unlock.	
 	\end{itemize}
 
-	Las funciones anteriores son solo algunas de disponibles en la librería pthread, al igual que estas, la totalidad de funciones se pueden consultar en la documentación de "pthread.h" \cite{Pthread_documentation}. 
+	Las funciones anteriores son solo algunas de disponibles en la librería Pthread, al igual que estas, la totalidad de funciones se pueden consultar en la documentación de "pthread.h" \cite{Pthread_documentation}. 
 
 	\newpage
 	\section{Descripción de la solución}
 	
-	Al estar ejecutándose diferentes procesos y diferentes hilos al mismo tiempo puede que uno de estos hilos intente modificar cierta variable de las estructuras de datos donde se guarda la información del puente, oficial de transito o semáforo, es por esta razón que se necesita un control sobre estas estructuras para que no ocurran deadlocks, osea que dos hilos intenten modificar una misma variable al "mismo tiempo". Aquí es donde se utilizan los MUTEX que ofrece la librería Pthread de LINUX, que permite controlar que un hilo acceda o modifique el contenido de una variable a la vez, si alguien lo esta haciendo el otro proceso tendrá que esperar hasta que este MUTEX se encuentre desbloqueado.
+	Al estar ejecutándose diferentes procesos e hilos al mismo tiempo puede que uno de estos hilos intente modificar cierta variable de las estructuras de datos donde se guarda la información del puente, oficial de tránsito o semáforo, es por esta razón que se necesita un control sobre estas estructuras para que no ocurran deadlocks, osea que dos hilos intenten modificar una misma variable al "mismo tiempo". Aquí es donde se utilizan los MUTEX que ofrece la librería Pthread de Linux, que permite controlar que un hilo acceda o modifique el contenido de una variable a la vez, si alguien lo esta haciendo el otro proceso tendrá que esperar hasta que este MUTEX se encuentre desbloqueado.
 	
-	Para la solución al problema planteado los MUTEX fueron indispensables tanto como la creación de hilos, a continuación se explicará como se implementaron los 3 diferentes mecanismos para controlar el tránsito en el puente.
+	Para la solución al problema planteado los MUTEX fueron indispensables, a continuación se explicará cómo se implementaron los 3 diferentes mecanismos para controlar el tránsito en el puente.
 	
 	\subsection{Semáforos}
 	Para implementar el control del tránsito mediante semáforos se utilizaron las siguientes estructuras:
@@ -163,16 +163,18 @@
 	\end{lstlisting}
 
 	\subsubsection{Semáforos}
-	Los semáforos están siempre en un loop infinito verificando si el semáforo contrario cerro el paso y encendió la luz roja, cuando el semáforo contrario apagó la luz verde, el semáforo actual enciende la luz verde e inicia el timer mediante la función sleep().
+	Los semáforos están siempre en un loop infinito verificando si el semáforo contrario cerro el paso y encendió la luz roja, cuando el semáforo contrario apagó la luz verde, el semáforo actual enciende la luz verde e inicia el timer mediante la función sleep(), este contador lleva el tiempo de luz verde del semáforo.
 	
 	\subsubsection{Puente}
-	El puente mediante las variables sentido y sentido\_actual permiten a los automóviles saber si tienen derecho de pasar o no. El sentido tomando en cuenta el estado del semáforo, sin embargo, sentido\_actual cambia hasta que el puente este desocupado de automóviles que ya estaban en el puente cunado el semáforo cambio de estado.
+	El puente mediante las variables sentido y sentido\_actual permiten a los automóviles saber si tienen derecho de pasar o no. El "sentido" toma en cuenta el estado del semáforo, sin embargo, "sentido\_actual" cambia hasta que el puente este desocupado de automóviles que ya estaban en el puente cuando el semáforo cambio de estado.
 	
 	\subsubsection{Automóviles}
-	Estos toman la decisión de pasar si el sentido y sentido\_actual son iguales, sino estos no pasaran por el puente.
+	Estos toman la decisión de pasar si el "sentido" y "sentido\_actual" son iguales, sino estos no pasaran por el puente.
+	
+	Existe una función muy importante que se implementa tanto en los semáforos como en todos los otros mecanismos de control del tránsito la cual es revisar\_puente\_en\_uso(). Esta función recorre el arreglo de MUTEX que representan el puente de izquierda a derecha y derecha izquierda al mismo tiempo lo cual verifica si el puente esta "vacío" o no.
 	
 	\subsection{Carnage}
-	En el modo carnage, el programa permite que el automóvil que llega de primero al puente pueda pasar, siempre y cuando no exista otro automóvil en el sentido contrario. Si hay un carro circulando en el mismo sentido del nuevo automóvil, este nuevo automóvil podrá entrar al puente detrás de los autos que ya estan usando este puente.
+	En el modo carnage, el programa permite que el automóvil que llega de primero al puente pueda pasar, siempre y cuando no exista otro automóvil en el sentido contrario. Si hay un carro circulando en el mismo sentido del nuevo automóvil, este nuevo automóvil podrá entrar al puente detrás de los autos que ya están usando este puente.
 	
 	Este modo de administración del puente utiliza las siguientes estructuras:
 	
@@ -195,7 +197,7 @@
 		};
 	\end{lstlisting}
 
-	Las estructuras para almacenar los datos en este programa son muy similares a la anterior, la diferencia es que aqui no existe la estructura de semáforo ya que los que controlan el paso por el puente son los mismos automóviles.\par
+	Las estructuras para almacenar los datos en este programa son muy similares a la anterior, la diferencia es que aquí no existe la estructura de semáforo ya que los que controlan el paso por el puente son los mismos automóviles.\par
 	A continuación se muestran las funciones utilizadas por este programa para la ejecución del mismo:
 	\begin{lstlisting}[style=CStyle]
 		int iniciar_carnage(); //Funcion encargada de iniciar lar variables
@@ -211,33 +213,65 @@
 
 	\subsection{Oficiales de tránsito}
 	
+	Para la implementación de los oficiales de tránsito se utilizaron las siguientes estructuras para guardar los datos:
+	
 	\begin{lstlisting}[style=CStyle]
 		struct oficial
 		{
 			int k_este; //Cantidad de vehiculos que el oficial permite que pasen por el este
 			int k_oeste; //Cantidad de vehiculos que el oficial permite que pasen por el este
-			int sentido; //sentido=1 si es este o sentido=0 si es oeste
-			int sentido_actual;//sentido=1 si es este o sentido=0 si es oeste
+			int este;    //este=1 si los automoviles van a pasar por el este
+			int oeste;   //oeste=1 si los automoviles van a pasar por el oeste
 			int contador_este; //Contador que lleva el control de los vehiculos que pasan por el este
 			int contador_oeste; //Contador que lleva el control de los vehiculos que pasan por el este
-			int *control_autos_este; //Arreglo de int del tamano de k el cual esta en estado 1 si el automovil esta usando el puente y 0 si este ya no lo esta usando
-			int *control_autos_oeste; //Arreglo de int del tamano de k el cual esta en estado 1 si el automovil esta usando el puente y 0 si este ya no lo esta usando
 			pthread_mutex_t lock_oficial;
 		};
 		
 		struct puente_oficial
 		{
+			int sentido; //sentido=1 si es este o sentido=0 si es oeste
+			int sentido_actual;//sentido=1 si es este o sentido=0 si es oeste
 			int longitud_puente;
 			pthread_mutex_t puente_check;
 			pthread_mutex_t *puente_lock;
 		};
+		struct info_autos_oficial
+		{
+			int creando_automoviles_este;  //Esta variable es igual a 1 si se estan creando automoviles o igual a 0 si no.
+			int creando_automoviles_oeste; //Esta variable es igual a 1 si se estan creando automoviles o igual a 0 si no.
+			int velocidad_auto_este;
+			int velocidad_auto_oeste;
+			int media_este;
+			int media_oeste;
+			struct oficial *oficial;
+			struct puente_oficial *puente;
+		};
 	\end{lstlisting}
 
-	Los oficiales de transito mediante las variables contadoras permiten llevar el control de la cantidad de automóviles que pasan en cierto sentido. Cuando pasan la k cantidad de automóviles de un sentido, empiezan a pasar los automóviles en el sentido contrario.\par
+	Los oficiales de tránsito mediante las variables contadoras permiten llevar el control de la cantidad de automóviles que pasan en cierto sentido. Cuando pasan la k cantidad de automóviles de un sentido, empiezan a pasar los automóviles en el sentido contrario.\par
+	
+	Las funciones utilizadas son las siguientes:\par 
+	
+	\begin{lstlisting}[style=CStyle]
+		void iniciar_oficial();
+		int main_runner_oficial(struct info_autos_oficial *info); //Esta funcion se encarga de crear y ejecutar threads que iniciaran la creacion de los semaforos y automoviles
+		void *create_oficial(void *arg);                          //Esta funcion encapsula la creacion del semaforo ubicado al este y oeste del puente
+		void *oficial_este(void *arg);                            //Enciende el semaforo del oeste
+		void *oficial_oeste(void *arg);                           //Enciende el semaforo del oeste
+		void *create_automoviles_oficial(void *arg);              //Funcion que crea los automoviles
+		void *automovil_este_oficial(void *arg);                  //Crea los automoviles por que entran por el este
+		void *automovil_oeste_oficial(void *arg);                 //Crea los automoviles que entran por el oeste
+		void *crear_autos_este_oficial(void *arg);
+		void *crear_autos_oeste_oficial(void *arg);
+		double ejecutar_integral_oficial(struct info_autos_oficial *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
+		int revisar_puente_en_uso_oficial(struct info_autos_oficial *info); //Revisa si el puente esta siendo usado por algun automovil
+	\end{lstlisting}
+
+	Al igual que en el semáforo una función bastante importante en esta implementación es la de revisar\_puente\_en\_uso\_oficial la cual permite verificar si existe algún automóvil usando el puente.
 		
 	\newpage
 	\section{Conclusión}
-	Para la realización de este proyecto el utilizar hilos fue de suma importancia ya que permitió que diferentes tareas se realizaran paralelamente (Tomando en cuenta el hardware del equipo). Los hilos permitieron que mientras se creaban automóviles de manera constante, las entidades de los semáforos o los oficiales de transito pudieran seguir operando sin que estos tuvieran que esperar a que la creación de automóviles terminara.\par
+	Para la realización de este proyecto el utilizar hilos fue de suma importancia ya que permitió que diferentes tareas se realizaran paralelamente (Tomando en cuenta el hardware del equipo). Los hilos permitieron que mientras se creaban automóviles de manera constante, las entidades de los semáforos o los oficiales de tránsito pudieran seguir operando sin que estos tuvieran que esperar a que la creación de automóviles terminara.\par
 	
 	Es por esta razón que cuando nosotros utilizamos un software en nuestra computadora el usuario puede interactuar con la interfaz grafica mientras en el "fondo" el programa realiza otras tareas, o también de la misma manera que un servidor esta siempre a la espera de peticiones de diferentes usuarios sin dejar al usuario que se esta atendiendo sin la información requerida.\par
 	
@@ -247,20 +281,19 @@
 	\section{Descripción del la experiencia}
 	La experiencia fue bastante interesante ya que hubieron varios tipos de situaciones a lo largo de la implementación de la solución al problema.Se tuvo que entender y obtener bastante conocimiento  del funcionamiento de los hilos en conjunto con los MUTEX para la implementación de la misma.\par  
 	
-	El proyecto se inicio con la implementación del mecanismo de los semáforos, esta se dio de manera fue fluida sin encontrar mayor complicación, se pudieron iniciar los semáforos cambiando el tiempo que estos estaban en verde y de la misma manera los automóviles empezaron a pasar por el puente sin provocar choques y aprovechando al máximo este recurso. \par
+	El proyecto se inicio con la implementación del mecanismo de los semáforos, esta se dio de manera fluida sin encontrar mayor complicación, se pudieron iniciar los semáforos cambiando el tiempo que estos estaban en verde y de la misma manera los automóviles empezaron a pasar por el puente sin provocar choques y aprovechando al máximo este recurso. \par
 	
 	Lo mismo ocurrió con la implementación del método carnage, donde se tenía que tener en cuenta que el automóvil que llegara al puente debía verificar si existía algún automóvil en el sentido contrario, en ese caso debía esperar que el puente estuviera libre. Este mecanismo tampoco tuvo una gran complicación fuera de lo normal.\par
 	
-	Donde si existió una mayor complicación fue en la creación del mecanismo del oficial de transito y en la implementación de las ambulancias las cuales tenían prioridad sobre cualquier vehículo esperando en el puente. Estas dos situaciones mencionadas no fueron implementadas con éxito siendo la ultima no implementada en su totalidad.\par 
+	Donde si existió una mayor complicación fue en la creación del mecanismo del oficial de tránsito y en la implementación de las ambulancias las cuales tenían prioridad sobre cualquier vehículo esperando en el puente. Este  ultimo no fue implementado en su totalidad en ninguno de los mecanismos.\par 
 	
-	Lo interesante es que la implementación del método del oficial de transito no era muy diferente que con el método del semáforo, si embargo, con el oficial de transito existieron grandes desafíos al controlar que los automóviles ingresaran de manera ordenada al puente cuando el oficial de transito desidia cambiar de sentido. Cuando el oficial cambiaba el sentido en que los automóviles debían ingresar al puente, los vehículos del nuevo sentido empezaban a ingresar al puente sin esperar a que los otros terminaran, lo que produciría un choque entre automóviles.\par 
+	Lo interesante es que la implementación del método del oficial de tránsito no era muy diferente que el método del semáforo, si embargo, con el oficial de tránsito existieron grandes desafíos al controlar que los automóviles ingresaran de manera ordenada al puente cuando el oficial de tránsito decidiera cambiar de sentido. Cuando el oficial cambiaba el sentido en que los automóviles debían ingresar al puente, los vehículos del nuevo sentido empezaban a ingresar al puente sin esperar a que los otros terminaran, lo que produciría un choque entre automóviles. Dichosamente este requerimiento si fue implementado con éxito, lo que hizo falta en los oficiales de transito fue que estos dieran paso a automóviles que estuvieran esperando si no había ningún automóvil recorriendo el sentido contrario.\par 
 	
-	La experiencia fue interesante dejando esta una "espinita" en la implementación de este ultimo método al cual se le dedicaron demasiadas horas sin llegar a una solución a los choques de los automóviles.
 	
 	\newpage
 	\section{Aprendizajes}
 	
-	Se puede decir que después de tanto problema provocado por los oficiales de transito el principal aprendizaje ha sido lo interesante y difícil que puede llegar a ser controlar los hilos de manera correcta cuando estos se manejan en grandes cantidades. Si se llegara a necesitar una gran cantidad de estos en un programa, se debe ser suficientemente cuidadoso para que no ocurran deadlocks y errores en la sincronizan de los mismos.\par 
+	Se puede decir que después de tanto problema provocado por los oficiales de tránsito el principal aprendizaje ha sido lo interesante y difícil que puede llegar a ser controlar los hilos de manera correcta cuando estos se manejan en grandes cantidades. Si se llegara a necesitar una gran cantidad de estos en un programa, se debe ser suficientemente cuidadoso para que no ocurran deadlocks y errores en la sincronizan de los mismos.\par 
 	
 	Después de esto, otro gran aprendizaje fue el de la utilización de los MUTEX, los cuales son una herramienta para precisamente evitar lo anterior mencionado en cuanto a la sincronización. C y Linux siguen dando sorpresas conforme se avanza en el curso y se aprenden funcionalidades nuevas de los sistemas operativos y el lenguaje de programación C.
 

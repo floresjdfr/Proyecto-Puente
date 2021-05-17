@@ -17,8 +17,6 @@ struct oficial
     int oeste;   //oeste=1 si los automoviles van a pasar por el oeste
     int contador_este;
     int contador_oeste;
-    int *control_autos_este;
-    int *control_autos_oeste;
     pthread_mutex_t lock_oficial;
 };
 
@@ -54,7 +52,7 @@ void *automovil_oeste_oficial(void *arg);                 //Crea los automoviles
 void *crear_autos_este_oficial(void *arg);
 void *crear_autos_oeste_oficial(void *arg);
 double ejecutar_integral_oficial(struct info_autos_oficial *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
-int revisar_puente_en_uso_oficial(struct info_autos_oficial *info);
+int revisar_puente_en_uso_oficial(struct info_autos_oficial *info); //Revisa si el puente esta siendo usado por algun automovil
 
 void iniciar_oficial()
 {
@@ -108,8 +106,6 @@ void iniciar_oficial()
     oficial->oeste = 0;
     oficial->contador_este = 0;
     oficial->contador_oeste = 0;
-    oficial->control_autos_este = calloc(sizeof(int), k_este);
-    oficial->control_autos_oeste = calloc(sizeof(int), k_oeste);
 
     //Inicializacion de varibales de struct donde se encaptulan las structs puente y y oficial
     struct info_autos_oficial *info = (struct info_autos_oficial *)malloc(sizeof(struct info_autos_oficial));
@@ -127,8 +123,6 @@ void iniciar_oficial()
 
     free(puente->puente_lock);
     free(info);
-    free(oficial->control_autos_este);
-    free(oficial->control_autos_oeste);
     free(oficial);
     free(puente);
 }
