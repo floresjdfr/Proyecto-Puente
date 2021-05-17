@@ -2,12 +2,13 @@
 #include "carnage.h"
 #include "oficial_transito.h"
 
-
 int elegir_opcion();
 
 int main(int argc, char const *argv[])
 {
-    int opcion_elegida = elegir_opcion();
+    int opcion_elegida = 0;
+start:
+    opcion_elegida = elegir_opcion();
     switch (opcion_elegida)
     {
     case 1:
@@ -21,8 +22,8 @@ int main(int argc, char const *argv[])
         iniciar_oficial();
         break;
 
-
     default:
+        goto start;
         break;
     }
 
