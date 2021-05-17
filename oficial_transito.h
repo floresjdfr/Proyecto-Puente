@@ -12,10 +12,10 @@ char MEDIA_OESTE_OFICIAL[] = "MEDIA_OESTE";
 
 struct oficial
 {
-    int k_este;
-    int k_oeste;
-    int sentido; //1 = este 0 = oeste
-    int sentido_actual;
+    int k_este;  //Cantidad de autos que deja pasar el oficial del este
+    int k_oeste; //Cantidad de autos que deja pasar el oficial del oeste
+    int este;    //este=1 si los automoviles van a pasar por el este
+    int oeste;   //oeste=1 si los automoviles van a pasar por el oeste
     int contador_este;
     int contador_oeste;
     int *control_autos_este;
@@ -26,6 +26,8 @@ struct oficial
 struct puente_oficial
 {
     int longitud_puente;
+    int sentido; //1 = este 0 = oeste
+    int sentido_actual;
     pthread_mutex_t puente_check;
     pthread_mutex_t *puente_lock;
 };
@@ -87,6 +89,8 @@ void iniciar_oficial()
 
     //Inicializacion de variables del puente
     puente->longitud_puente = longitud_puente;
+    puente->sentido = 1;
+    puente->sentido_actual = 1;
     pthread_mutex_init(&puente->puente_check, NULL);
     puente->puente_lock = calloc(puente->longitud_puente, sizeof(pthread_mutex_t));
     //inicializacion de mutex del puente
@@ -99,8 +103,8 @@ void iniciar_oficial()
     pthread_mutex_init(&oficial->lock_oficial, NULL);
     oficial->k_este = k_este;
     oficial->k_oeste = k_oeste;
-    oficial->sentido = 1;
-    oficial->sentido_actual = 1;
+    oficial->este = 1;
+    oficial->oeste = 0;
     oficial->contador_este = 0;
     oficial->contador_oeste = 0;
     oficial->control_autos_este = calloc(sizeof(int), k_este);
@@ -158,43 +162,48 @@ void *create_oficial(void *arg)
 
 void *oficial_este(void *arg)
 {
-
     struct info_autos_oficial *info = (struct info_autos_oficial *)arg;
+    while (1)
+    {
+        while (info->oficial->este == 0 && info->oficial->oeste == 1)
+            ;
+        pthread_mutex_lock(&info->oficial->lock_oficial);
+        info->oficial->contador_este = 0;
+        
+        info->puente->sentido = 1;
+        printf("Oficial deja pasar vehiculos este\n");
+        pthread_mutex_unlock(&info->oficial->lock_oficial);
 
-start:
-    while (info->oficial->sentido == 0 | info->oficial->contador_este < info->oficial->k_este)
-        ;
-
-    pthread_mutex_lock(&info->oficial->lock_oficial);
-    info->oficial->contador_este = 0;
-    info->oficial->sentido = 0;
-    for (int i = 0; i < info->oficial->k_este; i++)
-        info->oficial->control_autos_este[i] = 0;
-    printf("Oficial deja pasar vehiculos oeste\n");
-    pthread_mutex_unlock(&info->oficial->lock_oficial);
-    goto start;
-
+        while (info->oficial->contador_este < info->oficial->k_este)
+            ;
+        pthread_mutex_lock(&info->oficial->lock_oficial);
+        info->oficial->este = 0;
+        info->oficial->oeste == 1;
+        pthread_mutex_unlock(&info->oficial->lock_oficial);
+    }
     pthread_exit(0);
 }
 
 void *oficial_oeste(void *arg)
 {
     struct info_autos_oficial *info = (struct info_autos_oficial *)arg;
-
-start:
-    while (info->oficial->sentido == 1 | info->oficial->contador_oeste < info->oficial->k_oeste)
+    while (1)
     {
+        while (info->oficial->este == 1 && info->oficial->oeste == 0)
+            ;
+        pthread_mutex_lock(&info->oficial->lock_oficial);
+        info->oficial->contador_oeste = 0;
+        info->puente->sentido = 0;
+        printf("Oficial deja pasar vehiculos oeste\n");
+        pthread_mutex_unlock(&info->oficial->lock_oficial);
+
+        while (info->oficial->contador_oeste < info->oficial->k_oeste)
+            ;
+        pthread_mutex_lock(&info->oficial->lock_oficial);
+        info->oficial->este = 1;
+        info->oficial->oeste = 0;
+        pthread_mutex_unlock(&info->oficial->lock_oficial);
     }
-
-    pthread_mutex_lock(&info->oficial->lock_oficial);
-    info->oficial->contador_oeste = 0;
-    for (int i = 0; i < info->oficial->k_oeste; i++)
-        info->oficial->control_autos_oeste[i] = 0;
-    info->oficial->sentido = 1;
-    printf("Oficial deja pasar vehiculos este\n");
-    pthread_mutex_unlock(&info->oficial->lock_oficial);
-    goto start;
-
     pthread_exit(0);
 }
 
@@ -265,57 +274,25 @@ void *automovil_este_oficial(void *arg)
     double duracion_por_posicion_array = (double)(duracion_total / info->puente->longitud_puente); //Esta es la duracion
                                                                                                    //del vehiculo en cada espacio del array;
     double duracion_micro = (double)(duracion_por_posicion_array * 1000000);
-    int auto_id;
 
 start:
-    while (info->oficial->sentido == 0)
-    {
-    }
-    if (info->oficial->sentido_actual == 0)
-    {
-        if (revisar_puente_en_uso_oeste(info) == 0)
-        {
-            pthread_mutex_lock(&info->oficial->lock_oficial);
-            info->oficial->sentido_actual = 1;
-            pthread_mutex_unlock(&info->oficial->lock_oficial);
-        }
+    while (info->puente->sentido == 0)
+        ;
 
+    if (info->puente->sentido_actual == 0)
+        if (revisar_puente_en_uso_oficial(info) == 0)
+            info->puente->sentido_actual = 1;
         else
-        {
             goto start;
-        }
-    }
-
-    if (info->oficial->sentido == 0)
-        goto start;
 
     for (int i = 0; i < info->puente->longitud_puente; i++)
     {
         if (i == 0)
         {
-            if (info->oficial->sentido == 1)
-            {
-                pthread_mutex_lock(&info->puente->puente_lock[i]);
-                pthread_mutex_lock(&info->oficial->lock_oficial);
-                auto_id = info->oficial->contador_este;
-                info->oficial->contador_este++;
-                info->oficial->control_autos_este[auto_id] = 1;
-                printf("PASA ESTE #%d\n", info->oficial->contador_este);
-                pthread_mutex_unlock(&info->oficial->lock_oficial);
-                printf("Auto '%ld' pasando '%d'este->oeste\n", pthread_self(), i);
-                usleep((int)duracion_micro);
-                pthread_mutex_unlock(&info->puente->puente_lock[i]);
-            }
-            else
-            {
-                goto start;
-            }
-        }
-        else if (i == info->puente->longitud_puente - 1)
-        {
             pthread_mutex_lock(&info->puente->puente_lock[i]);
             pthread_mutex_lock(&info->oficial->lock_oficial);
-            info->oficial->control_autos_este[auto_id] = 0;
+            info->oficial->contador_este++;
+            printf("PASA ESTE #%d\n", info->oficial->contador_este);
             pthread_mutex_unlock(&info->oficial->lock_oficial);
             printf("Auto '%ld' pasando '%d'este->oeste\n", pthread_self(), i);
             usleep((int)duracion_micro);
@@ -324,7 +301,6 @@ start:
         else
         {
             pthread_mutex_lock(&info->puente->puente_lock[i]);
-
             printf("Auto '%ld' pasando '%d'este->oeste\n", pthread_self(), i);
             usleep((int)duracion_micro);
             pthread_mutex_unlock(&info->puente->puente_lock[i]);
@@ -343,55 +319,23 @@ void *automovil_oeste_oficial(void *arg)
     int auto_id;
 
 start:
-    while (info->oficial->sentido == 1)
-    {
-    }
-    if (info->oficial->sentido_actual == 1)
-    {
-        if (revisar_puente_en_uso_este(info) == 0)
-        {
-            pthread_mutex_lock(&info->oficial->lock_oficial);
-            info->oficial->sentido_actual = 0;
-            pthread_mutex_unlock(&info->oficial->lock_oficial);
-        }
+    while (info->puente->sentido == 1)
+        ;
 
+    if (info->puente->sentido_actual == 1)
+        if (revisar_puente_en_uso_oficial(info) == 0)
+            info->puente->sentido_actual = 0;
         else
-        {
             goto start;
-        }
-    }
 
-    if (info->oficial->sentido == 1)
-        goto start;
-    for (int i = info->puente->longitud_puente - 1; i >= 0; i--)
+    for (int i = info->puente->longitud_puente-1; i >= 0; i--)
     {
-        if (i == info->puente->longitud_puente - 1)
-        {
-
-            if (info->oficial->sentido == 0)
-            {
-                pthread_mutex_lock(&info->puente->puente_lock[i]);
-                pthread_mutex_lock(&info->oficial->lock_oficial);
-                auto_id = info->oficial->contador_oeste;
-                info->oficial->contador_oeste++;
-                info->oficial->control_autos_oeste[auto_id] = 1;
-                printf("PASA oESTE #%d\n", info->oficial->contador_oeste);
-                pthread_mutex_unlock(&info->oficial->lock_oficial);
-
-                printf("Auto '%ld' pasando '%d'oeste->este\n", pthread_self(), i);
-                usleep((int)duracion_micro);
-                pthread_mutex_unlock(&info->puente->puente_lock[i]);
-            }
-            else
-            {
-                goto start;
-            }
-        }
-        else if (i == info->puente->longitud_puente - 1)
+        if (i == info->puente->longitud_puente-1)
         {
             pthread_mutex_lock(&info->puente->puente_lock[i]);
             pthread_mutex_lock(&info->oficial->lock_oficial);
-            info->oficial->control_autos_oeste[auto_id] = 0;
+            info->oficial->contador_oeste++;
+            printf("PASA OESTE #%d\n", info->oficial->contador_oeste);
             pthread_mutex_unlock(&info->oficial->lock_oficial);
             printf("Auto '%ld' pasando '%d'oeste->este\n", pthread_self(), i);
             usleep((int)duracion_micro);
@@ -405,25 +349,24 @@ start:
             pthread_mutex_unlock(&info->puente->puente_lock[i]);
         }
     }
-
     pthread_exit(0);
 }
 
-int revisar_puente_en_uso_este(struct info_autos_oficial *info)
+int revisar_puente_en_uso_oficial(struct info_autos_oficial *info)
 {
-    int puente_libre = 0;
-    for (int i = 0; i < info->oficial->k_este; i++)
+    int puente_libre_counter = 0;
+    for (int i = 0; i < info->puente->longitud_puente; i++)
     {
-        puente_libre += info->oficial->control_autos_este[i];
+        if (pthread_mutex_trylock(&info->puente->puente_lock[i]) == 0)
+        {
+            pthread_mutex_unlock(&info->puente->puente_lock[i]);
+            puente_libre_counter++;
+        }
     }
-    if (puente_libre == 0) //si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
-    {
+    if (puente_libre_counter == info->puente->longitud_puente) //si la cantidad de espacios disponibles es igual a la longitud del puente, el puente esta libre de autos
         return 0;
-    }
     else
-    {
         return 1;
-    }
 }
 
 int revisar_puente_en_uso_oeste(struct info_autos_oficial *info)
