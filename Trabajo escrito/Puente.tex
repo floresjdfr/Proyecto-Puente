@@ -105,6 +105,10 @@
 	\newpage
 	\section{Descripción de la solución}
 	
+	Al estar ejecutándose diferentes procesos y diferentes hilos al mismo tiempo puede que uno de estos hilos intente modificar cierta variable de las estructuras de datos donde se guarda la información del puente, oficial de transito o semáforo, es por esta razón que se necesita un control sobre estas estructuras para que no ocurran deadlocks, osea que dos hilos intenten modificar una misma variable al "mismo tiempo". Aquí es donde se utilizan los MUTEX que ofrece la librería Pthread de LINUX, que permite controlar que un hilo acceda o modifique el contenido de una variable a la vez, si alguien lo esta haciendo el otro proceso tendrá que esperar hasta que este MUTEX se encuentre desbloqueado.
+	
+	Para la solución al problema planteado los MUTEX fueron indispensables tanto como la creación de hilos, a continuación se explicará como se implementaron los 3 diferentes mecanismos para controlar el tránsito en el puente.
+	
 	\subsection{Semáforos}
 	Para implementar el control del tránsito mediante semáforos se utilizaron las siguientes estructuras:
 	
@@ -166,6 +170,99 @@
 	
 	\subsubsection{Automóviles}
 	Estos toman la decisión de pasar si el sentido y sentido\_actual son iguales, sino estos no pasaran por el puente.
+	
+	\subsection{Carnage}
+	En el modo carnage, el programa permite que el automóvil que llega de primero al puente pueda pasar, siempre y cuando no exista otro automóvil en el sentido contrario. Si hay un carro circulando en el mismo sentido del nuevo automóvil, este nuevo automóvil podrá entrar al puente detrás de los autos que ya estan usando este puente.
+	
+	Este modo de administración del puente utiliza las siguientes estructuras:
+	
+	\begin{lstlisting}[style=CStyle]
+		struct puente_carnage
+		{
+			int sentido;        //sentido=1 si es este o sentido=0 si es oeste
+			int sentido_actual; //sentido=1 si es este o sentido=0 si es oeste
+			int longitud_puente;
+			pthread_mutex_t *puente_lock; //array de MUTEX que representa el puente
+		};
+		
+		struct info_autos_carnage
+		{
+			int velocidad_auto_este;
+			int velocidad_auto_oeste;
+			int media_este;
+			int media_oeste;
+			struct puente_carnage *puente;
+		};
+	\end{lstlisting}
+
+	Las estructuras para almacenar los datos en este programa son muy similares a la anterior, la diferencia es que aqui no existe la estructura de semáforo ya que los que controlan el paso por el puente son los mismos automóviles.\par
+	A continuación se muestran las funciones utilizadas por este programa para la ejecución del mismo:
+	\begin{lstlisting}[style=CStyle]
+		int iniciar_carnage(); //Funcion encargada de iniciar lar variables
+		int main_runner_carnage(struct info_autos_carnage *info); //Esta funcion se encarga de crear y ejecutar threads que iniciaran la creacion de los  automoviles
+		void *create_automoviles_carnage(void *arg); //Funcion que crea los automoviles
+		void *automovil_este_carnage(void *arg);     //Automovil que pasa por el este
+		void *automovil_oeste_carnage(void *arg);    //Automovil que pasa por el oeste
+		void *crear_autos_este_carnage(void *arg);   //Crea los automoviles por que entran por el este
+		void *crear_autos_oeste_carnage(void *arg);  //Crea los automoviles que entran por el oeste
+		double ejecutar_integral_carnage(struct info_autos_carnage *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
+		int revisar_sentido_carnage(struct puente_carnage *puente); //funcion que recorre el arreglo de mutex revisando si hay un automovil usando el puente o no
+	\end{lstlisting}
+
+	\subsection{Oficiales de tránsito}
+	
+	\begin{lstlisting}[style=CStyle]
+		struct oficial
+		{
+			int k_este; //Cantidad de vehiculos que el oficial permite que pasen por el este
+			int k_oeste; //Cantidad de vehiculos que el oficial permite que pasen por el este
+			int sentido; //sentido=1 si es este o sentido=0 si es oeste
+			int sentido_actual;//sentido=1 si es este o sentido=0 si es oeste
+			int contador_este; //Contador que lleva el control de los vehiculos que pasan por el este
+			int contador_oeste; //Contador que lleva el control de los vehiculos que pasan por el este
+			int *control_autos_este; //Arreglo de int del tamano de k el cual esta en estado 1 si el automovil esta usando el puente y 0 si este ya no lo esta usando
+			int *control_autos_oeste; //Arreglo de int del tamano de k el cual esta en estado 1 si el automovil esta usando el puente y 0 si este ya no lo esta usando
+			pthread_mutex_t lock_oficial;
+		};
+		
+		struct puente_oficial
+		{
+			int longitud_puente;
+			pthread_mutex_t puente_check;
+			pthread_mutex_t *puente_lock;
+		};
+	\end{lstlisting}
+
+	Los oficiales de transito mediante las variables contadoras permiten llevar el control de la cantidad de automóviles que pasan en cierto sentido. Cuando pasan la k cantidad de automóviles de un sentido, empiezan a pasar los automóviles en el sentido contrario.\par
+		
+	\newpage
+	\section{Conclusión}
+	Para la realización de este proyecto el utilizar hilos fue de suma importancia ya que permitió que diferentes tareas se realizaran paralelamente (Tomando en cuenta el hardware del equipo). Los hilos permitieron que mientras se creaban automóviles de manera constante, las entidades de los semáforos o los oficiales de transito pudieran seguir operando sin que estos tuvieran que esperar a que la creación de automóviles terminara.\par
+	
+	Es por esta razón que cuando nosotros utilizamos un software en nuestra computadora el usuario puede interactuar con la interfaz grafica mientras en el "fondo" el programa realiza otras tareas, o también de la misma manera que un servidor esta siempre a la espera de peticiones de diferentes usuarios sin dejar al usuario que se esta atendiendo sin la información requerida.\par
+	
+	Tomando lo anterior señalado se entiende la importancia de los hilos en la programación y de igual manera se entiende de la excelente tarea que realiza el sistema operativo sincronizando los procesos y el scheduling de los mismos los cuales permiten un correcto funcionamiento del sistema en general.
+	
+	\newpage
+	\section{Descripción del la experiencia}
+	La experiencia fue bastante interesante ya que hubieron varios tipos de situaciones a lo largo de la implementación de la solución al problema.Se tuvo que entender y obtener bastante conocimiento  del funcionamiento de los hilos en conjunto con los MUTEX para la implementación de la misma.\par  
+	
+	El proyecto se inicio con la implementación del mecanismo de los semáforos, esta se dio de manera fue fluida sin encontrar mayor complicación, se pudieron iniciar los semáforos cambiando el tiempo que estos estaban en verde y de la misma manera los automóviles empezaron a pasar por el puente sin provocar choques y aprovechando al máximo este recurso. \par
+	
+	Lo mismo ocurrió con la implementación del método carnage, donde se tenía que tener en cuenta que el automóvil que llegara al puente debía verificar si existía algún automóvil en el sentido contrario, en ese caso debía esperar que el puente estuviera libre. Este mecanismo tampoco tuvo una gran complicación fuera de lo normal.\par
+	
+	Donde si existió una mayor complicación fue en la creación del mecanismo del oficial de transito y en la implementación de las ambulancias las cuales tenían prioridad sobre cualquier vehículo esperando en el puente. Estas dos situaciones mencionadas no fueron implementadas con éxito siendo la ultima no implementada en su totalidad.\par 
+	
+	Lo interesante es que la implementación del método del oficial de transito no era muy diferente que con el método del semáforo, si embargo, con el oficial de transito existieron grandes desafíos al controlar que los automóviles ingresaran de manera ordenada al puente cuando el oficial de transito desidia cambiar de sentido. Cuando el oficial cambiaba el sentido en que los automóviles debían ingresar al puente, los vehículos del nuevo sentido empezaban a ingresar al puente sin esperar a que los otros terminaran, lo que produciría un choque entre automóviles.\par 
+	
+	La experiencia fue interesante dejando esta una "espinita" en la implementación de este ultimo método al cual se le dedicaron demasiadas horas sin llegar a una solución a los choques de los automóviles.
+	
+	\newpage
+	\section{Aprendizajes}
+	
+	Se puede decir que después de tanto problema provocado por los oficiales de transito el principal aprendizaje ha sido lo interesante y difícil que puede llegar a ser controlar los hilos de manera correcta cuando estos se manejan en grandes cantidades. Si se llegara a necesitar una gran cantidad de estos en un programa, se debe ser suficientemente cuidadoso para que no ocurran deadlocks y errores en la sincronizan de los mismos.\par 
+	
+	Después de esto, otro gran aprendizaje fue el de la utilización de los MUTEX, los cuales son una herramienta para precisamente evitar lo anterior mencionado en cuanto a la sincronización. C y Linux siguen dando sorpresas conforme se avanza en el curso y se aprenden funcionalidades nuevas de los sistemas operativos y el lenguaje de programación C.
 
 	\newpage
 	\printbibliography
