@@ -7,6 +7,32 @@
 \usepackage{graphicx}
 \usepackage[style=numeric]{biblatex}
 \addbibresource{Referencias.bib}
+\usepackage{xcolor}
+\usepackage{listings}
+\definecolor{mGreen}{rgb}{0,0.6,0}
+\definecolor{mGray}{rgb}{0.5,0.5,0.5}
+\definecolor{mPurple}{rgb}{0.58,0,0.82}
+\definecolor{backgroundColour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{CStyle}{
+	backgroundcolor=\color{backgroundColour},   
+	commentstyle=\color{mGreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{mGray},
+	stringstyle=\color{mPurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2,
+	language=C
+}
 
 \title{Proyecto 1: Puente}
 \author{José David Flores Rodríguez}
@@ -76,8 +102,71 @@
 
 	Las funciones anteriores son solo algunas de disponibles en la librería pthread, al igual que estas, la totalidad de funciones se pueden consultar en la documentación de "pthread.h" \cite{Pthread_documentation}. 
 
+	\newpage
+	\section{Descripción de la solución}
 	
+	\subsection{Semáforos}
+	Para implementar el control del tránsito mediante semáforos se utilizaron las siguientes estructuras:
 	
+	\begin{lstlisting}[style=CStyle]
+		struct semaforo
+		{
+			int tiempo_verde_este;
+			int tiempo_verde_oeste;
+			int este; //este = 1 si luz verde de este esta encendido, este = 0 si no 
+			int oeste; //oeste = 1 si luz verde de oeste esta encendido, oeste = 0 si no
+			int uso_timer; //Identifica si hay algun semaforo utilizando el timer para pasar de verde a rojo
+			pthread_mutex_t mutex; 
+			struct puente *puente; 
+		};
+		
+		struct puente
+		{
+			int sentido;        //sentido = 1 si los automoviles van al este y sentido = 0 si van al oeste
+			int sentido_actual; //sentido = 1 si los automoviles van al este y sentido = 0 si van al oeste
+			int longitud_puente;
+			pthread_mutex_t *puente_lock; //Arreglo de MUTEX el cual representa el puente
+		};
+		
+		struct info_autos 
+		{
+			int velocidad_auto_este;
+			int velocidad_auto_oeste;
+			int media_este;
+			int media_oeste;
+			struct semaforo *semaforos;
+			struct puente *puente;
+		};
+	\end{lstlisting}
+	
+	La estructura que se pasa como argumento en la mayoría de los hilos es "info\_autos" la cual contiene toda la información que los automóviles necesitan para decidir si pasar o no.
+	
+	Las funciones utilizadas en la implementación fueron las siguientes:
+	
+	\begin{lstlisting}[style=CStyle]
+		int iniciar_semaforo(); //Funcion principal que se encarga de iniciar las variables
+		int main_runner(struct info_autos *info); //Esta funcion se encarga de crear y ejecutar threads que iniciaran la creacion de los semaforos y automoviles
+		void *create_semaforos(void *arg);        //Esta funcion encapsula la creacion del semaforo ubicado al este y oeste del puente
+		void *cambiar_semaforo_este(void *arg);   //Enciende el semaforo del oeste
+		void *cambiar_semaforo_oeste(void *arg);  //Enciende el semaforo del oeste
+		void *create_automoviles(void *arg);      //Funcion que crea los automoviles
+		void *automovil_este(void *arg);          //Crea los automoviles por que entran por el este
+		void *automovil_oeste(void *arg);         //Crea los automoviles que entran por el oeste
+		void *crear_autos_este(void *arg);		  //Automovil que entra por el este	
+		void *crear_autos_oeste(void *arg);       //Automovil que entra por el oeste
+		double ejecutar_integral(struct info_autos *info, char eleccion_media[]); //Funcion que ejecuta la integral exponencial encargada de decidir la velocidad con que se crean los automoviles;
+		int revisar_puente_en_uso(struct puente *puente);                         //funcion que recorre el arreglo de mutex revisando si hay un automovil usado el puente o no
+	\end{lstlisting}
+
+	\subsubsection{Semáforos}
+	Los semáforos están siempre en un loop infinito verificando si el semáforo contrario cerro el paso y encendió la luz roja, cuando el semáforo contrario apagó la luz verde, el semáforo actual enciende la luz verde e inicia el timer mediante la función sleep().
+	
+	\subsubsection{Puente}
+	El puente mediante las variables sentido y sentido\_actual permiten a los automóviles saber si tienen derecho de pasar o no. El sentido tomando en cuenta el estado del semáforo, sin embargo, sentido\_actual cambia hasta que el puente este desocupado de automóviles que ya estaban en el puente cunado el semáforo cambio de estado.
+	
+	\subsubsection{Automóviles}
+	Estos toman la decisión de pasar si el sentido y sentido\_actual son iguales, sino estos no pasaran por el puente.
+
 	\newpage
 	\printbibliography
 	

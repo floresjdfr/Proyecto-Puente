@@ -27,9 +27,6 @@ struct puente
     int sentido_actual; //1 = este 0 = oeste
     int longitud_puente;
     pthread_mutex_t *puente_lock;
-    struct stack *ambulancias_este;
-    struct stack *ambulancias_oeste;
-    int sentido_ambulancia; //1 = este 0 = oeste
 };
 
 struct info_autos
@@ -99,7 +96,6 @@ int iniciar_semaforo()
     {
         pthread_mutex_init(&puente->puente_lock[i], NULL);
     }
-    puente->sentido_ambulancia = 1;
 
     //Inicializacion de variables de los semaforos
     semaforos->tiempo_verde_este = tiempo_verde_este;
@@ -124,8 +120,6 @@ int iniciar_semaforo()
     main_runner(info);
 
     free(puente->puente_lock);
-    free(puente->ambulancias_este);
-    free(puente->ambulancias_oeste);
     free(info);
     free(semaforos);
     free(puente);
